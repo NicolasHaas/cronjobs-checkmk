@@ -1,0 +1,41 @@
+---
+- name: Set permissions on /var/lib/check_mk_agent/log/ so all users can traverse
+  ansible.builtin.file:
+    path: '/var/lib/check_mk_agent/log/'
+    state: directory
+    mode: '0755'
+
+- name: Set log_cmd var
+  ansible.builtin.set_fact:
+    log_cmd: '>> /var/lib/check_mk_agent/log/{{ item.user }}/{{ item.name }}/$(date +\%Y-\%m-\%dT\%H:\%M:\%SZ).log 2>&1'
+
+- name: Create logrotate config file
+  ansible.builtin.file:
+    path: '/etc/logrotate.d/{{ item.name }}'
+    state: touch
+    mode: '0644'
+    owner: 'root'
+    group: 'root'
+
+- name: Create a log directory if it does not exist
+  ansible.builtin.file:
+    path: '/var/lib/check_mk_agent/log/{{ item.user }}/{{ item.name }}/'
+    state: directory
+    owner: '{{ item.user }}'
+    group: '{{ item.user }}'
+    mode: '0744'
+
+- name: Add config block to logrotate config file
+  ansible.builtin.blockinfile:
+    path: '/etc/logrotate.d/{{ item.name }}'
+    block: |
+      /var/lib/check_mk_agent/log/{{ item.user }}/{{ item.name }}/*.log {
+        rotate {{ item.log.rotate | default('0') }}
+        size {{ item.log.size | default('10M') }}
+        maxage {{ item.log.maxage | default('30') }}
+        copytruncate
+        missingok
+        nomail
+        compress
+        delaycompress
+      }

@@ -1,0 +1,4 @@
+---
+- name: Loop over cron_jobs list
+  include_tasks: cronjobs-checkmk.yml
+  loop: "{{ cron_jobs }}"

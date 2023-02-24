@@ -1,0 +1,25 @@
+---
+- name: Set logging_cmd and enable logrotate
+  include_tasks: logging.yml
+  when: item.enable_logging
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "/var/lib/check_mk_agent/job/{{ item.user }}"
+    state: directory
+    owner: "{{ item.user }}"
+    group: "{{ item.user }}"
+    mode: '0774'
+  when: item.user != 'root'
+
+- name: Creates a cron file under /etc/cron.d
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    month: "{{ item.month | default(omit) }}"
+    weekday: "{{ item.weekday | default(omit) }}"
+    day: "{{ item.day | default(omit) }}"
+    hour: "{{ item.hour | default(omit) }}"
+    minute: "{{ item.minute | default(omit) }}"
+    user: "{{ item.user }}"
+    job: "/usr/local/bin/mk-job {{ item.name }} {{ item.cmd }} {{ log_cmd }}"
+    cron_file: "ansible_{{ item.name }}"
